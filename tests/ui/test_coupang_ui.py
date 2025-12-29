@@ -1,6 +1,7 @@
 from urllib.parse import quote_plus
 
 import pytest
+from pathlib import Path
 
 
 @pytest.mark.network
@@ -28,3 +29,18 @@ def test_sqli_query_blocked_in_browser(page):
     if response.status == 403:
         assert "x-reference-error" in headers
     assert "Access Denied" in page.content()
+
+
+@pytest.mark.network
+@pytest.mark.ui
+def test_access_denied_screenshot_saved(page, tmp_path):
+    screenshots_dir = Path("reports/screenshots")
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    response = page.goto("https://www.coupang.com/", wait_until="domcontentloaded")
+
+    assert response is not None
+    screenshot_path = screenshots_dir / "access_denied.png"
+    page.screenshot(path=str(screenshot_path))
+
+    assert screenshot_path.exists()
+    assert screenshot_path.stat().st_size > 0
