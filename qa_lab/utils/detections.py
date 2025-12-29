@@ -57,7 +57,7 @@ def detect_discovery_enumeration(
 
 
 def detect_exploit_attempts(events: Iterable[LogEvent]) -> DetectionResult:
-    """Detect Exploit Public-Facing Application attempts (MITRE T1190)."""
+    """Detect Exploit Public-Facing Application attempts (MITRE T1190, Initial Access)."""
     matches = [
         event
         for event in events

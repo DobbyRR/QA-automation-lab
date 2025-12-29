@@ -1,113 +1,70 @@
-# QA Automation Lab · Coupang QA
+# QA Automation Lab · Public Web & CDN Monitoring (Coupang example)
 
-쿠팡(`https://www.coupang.com`)의 웹/정적 자원을 대상으로  
-`Python + pytest + requests` 로 기본 QA 시나리오(Positive/Negative/Regression/로그 검증)를 자동화했다.
+Python + pytest + Playwright로 공개 웹/정적 리소스를 빠르게 검증하고, Positive/Negative/Regression/보안 행위 테스트를 한 번에 자동화하는 포트폴리오 프로젝트입니다. 예시 타깃으로 Coupang의 공개 리소스를 사용하지만, 구조는 어떤 퍼블릭 도메인에도 재활용 가능합니다.
 
-## Stack & Principles
-- Python 3.9 이상 (필수)
-- pytest
-- requests
-- Playwright + `pytest-playwright` 로 헤드리스 브라우저 QA
-- 실 서비스 호출은 `pytest -m network` 로 구분하고, 그 외는 `monkeypatch` 로 빠른 단위 테스트 유지
-- `QA_LAB_LOG_PATH` 환경변수를 지정하면 HTTP 로그가 JSON 파일로 쌓여 Threat Hunting 분석에 바로 활용 가능
-- Threat Hunting 자료를 그대로 활용해 MITRE ATT&CK 전술/기술을 테스트 케이스에 명시
-- GitHub Actions(workflow: `.github/workflows/qa.yml`)에서 `./scripts/run_tests.sh --report` 를 주기적으로 실행하고, HTML 리포트를 artifact 로 업로드해 공유할 수 있다.
-- CI(예: GitHub Actions)에서 `./scripts/run_tests.sh --report` 를 주기적으로 실행하면 네트워크/API/보안/UI 전체 커버리지 리포트를 자동 수집할 수 있다.
+## Highlights
+- 공통 `ApiClient` + 환경변수(`QA_LAB_*`) 기반으로 BASE URL/CDN/timeout/User-Agent를 손쉽게 교체합니다.
+- `pytest` 마커로 네트워크·UI·보안 테스트를 분리해 opt-in 실행이 가능합니다(`-m network`, `-m "network and ui"` 등).
+- Threat Hunting 자료를 MITRE ATT&CK T1046(Discovery: Network Service Discovery) / T1190(Initial Access: Exploit Public-Facing Application) / T1595(Reconnaissance) / T1499(Impact) 로 매핑한 탐지 룰과 Negative 케이스를 포함합니다.
+- Playwright(Chromium)로 Access Denied/SQLi 차단 화면을 실제 브라우저에서 캡처해 `reports/screenshots/` 에 증거를 남깁니다.
+- GitHub Actions(`.github/workflows/qa.yml`)에서 `./scripts/run_tests.sh --report` 를 실행하고 HTML 리포트를 artifact로 업로드합니다.
 
-## 현재 검증 범위
-- **Positive Test**: 쿠팡 CDN 로고 자산이 200, `image/png` 로 응답하는지 확인.
-- **Negative Test**: WAF가 의심스러운 검색 쿼리를 403(`x-reference-error`)로 차단하는지 확인.
-- **Regression Test**: 메인 홈(`https://www.coupang.com/`)이 `Strict-Transport-Security` 헤더를 유지하는지 확인.
-- **로그 기반 검증**: `ApiClient` 가 모든 HTTP 교환을 로깅하고 있는지 pytest로 캡처.
-- **자동화 개념 확장**: rate-limit 기반 행위 감지(`RequestSpikeDetector`), 탐지 룰 테스트(`tests/security/test_detection.py`).
-- **Security QA 업그레이드**: MITRE Discovery(T1046) / Credential Access(T1190) 행위를 Negative Test Case로 모델링하고 “이 행동 나오면 FAIL”을 코드로 표현.
+## Quickstart
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && python -m playwright install chromium
+./scripts/run_tests.sh --report          # 전체 테스트 + 타임스탬프 HTML 리포트 생성
+```
+- 네트워크/실서비스 호출 없이 빠르게 돌리고 싶다면 `./scripts/run_tests.sh -m "not network"` 를 사용합니다.  
+- UI만 확인하고 싶다면 `pytest -m "network and ui"` 를 실행합니다.
+
+## Test Coverage
+- **Positive**: CDN 로고 자산 200 응답, `Content-Length`, HSTS, 정적 헤더 회귀(`tests/api/test_coupang_public.py`, `tests/api/test_coupang_assets.py`)
+- **Negative**: SQLi 스타일 검색 → 403 + `X-Reference-Error`, 위조 쿠키 주입, `/np/coupons` 접근 제한 (`tests/security/test_coupang_waf.py`, `tests/security/test_cookie_tampering.py`, `tests/api/test_coupang_product.py`)
+- **Regression**: 홈/검색 응답의 HSTS·세션 헤더, 상태코드 일관성 (`tests/api/test_coupang_headers.py`)
+- **Security Behaviors (MITRE)**:
+  - T1046 Discovery – 짧은 시간 `/np/search` 반복 호출 탐지
+  - T1190 Initial Access – SQLi payload 감지
+  - T1595 Recon – 제한 엔드포인트 접근 시 차단 여부
+  - T1499 Impact – Latency spike 알람
+  (`tests/security/test_mitre_behaviors.py`, `tests/security/test_abuse.py`, `qa_lab/utils/detections.py`)
+- **Logs & Reporting**: `QA_LAB_LOG_PATH` 지정 시 HTTP 로그를 JSON 라인으로 저장하고 pytest로 검증 (`tests/security/test_log_sink.py`)
+- **UI (Playwright)**: Access Denied 배너, SQLi 차단 페이지, 스크린샷 저장 (`tests/ui/test_coupang_ui.py`)
+
+## Markers & Execution
+| 마커 | 설명 | 예시 명령 |
+| --- | --- | --- |
+| `network` | 실서비스 호출(HTTP/Playwright) | `pytest -m network` |
+| `ui` | Playwright UI 테스트 | `pytest -m "network and ui"` |
+| `slow` | Rate-limit 의존 테스트 | `pytest -m slow` |
+| 없음 | mock/fake response 기반 빠른 테스트 | `pytest -m "not network"` |
+
+`./scripts/run_tests.sh --report` 는 내부적으로 `reports/qa_report_<timestamp>.html` 과 스크린샷을 생성합니다.
+
+## CI & Reports
+- `.github/workflows/qa.yml` 은 Ubuntu + Python 3.11 + Playwright 환경을 세팅하고, 전체 테스트 실행 후 HTML 리포트를 artifact 로 업로드합니다.
+- 로컬에서도 동일 명령(`./scripts/run_tests.sh --report`)만 실행하면 타임스탬프 기반 HTML 리포트가 `reports/` 아래에 누적됩니다.
+
+## Safety / Ethics
+본 프로젝트는 학습/포트폴리오 목적이며, **테스트 트래픽을 최소화하고 민감 페이로드를 과도하게 보내지 않습니다.**  
+네트워크 테스트는 opt-in(`-m network`)일 때만 수행되며, 기본 실행은 mock/monkeypatch 응답으로만 돌아갑니다. 실서비스 도메인을 교체할 때도 동일한 원칙을 적용합니다.
 
 ## Repo Layout
 ```text
 qa-automation-lab/
-  qa_lab/                  # 앱/공통 코드 (재사용 모듈)
-    __init__.py
-    config.py              # BASE_URL, CDN_URL, timeout 등
-    client.py              # ApiClient (requests 래퍼)
-    utils/
-      __init__.py
-      logging.py           # 로깅 유틸
-      rate_limit.py        # 스파이크 체크 헬퍼
-  tests/                   # 테스트만
-    __init__.py
-    conftest.py            # fixtures (api client 등)
-    api/
-      test_coupang_public.py
-    security/
-      test_abuse.py        # 반복 호출/이상행위 헬퍼
-      test_detection.py    # 룰/탐지 흉내
-      test_coupang_waf.py  # Negative Test
-      test_logging.py      # 로그 기반 검증
-      ...
-    ui/
-      test_coupang_ui.py   # Playwright 기반 UI 테스트
-  docs/                    # 문서(포트폴리오 점수 올려주는 곳)
-    scenarios.md           # 보안 시나리오 설명
-    decisions.md           # 설계/판단 근거
-    findings.md            # 실험 결과/이슈 기록
-    setup.md               # 로컬 실행 방법
-  scripts/
-    run_tests.sh           # pytest 실행 스크립트
-  reports/                 # (gitignore) HTML 리포트 아웃풋
-  requirements.txt
-  pytest.ini
-  README.md
+  qa_lab/            # 공통 코드 (config/client/utils)
+  tests/
+    api/             # Positive/Regression
+    security/        # Negative/MITRE/로그
+    ui/              # Playwright
+  docs/              # 시나리오·결정·결과·setup
+  scripts/run_tests.sh
+  reports/           # HTML 리포트 & 스크린샷 (gitignore)
+  .github/workflows/qa.yml
 ```
 
-## 실행 방법
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m playwright install chromium   # UI 테스트용
-./scripts/run_tests.sh
-# UI 테스트만 실행하려면
-pytest -m "network and ui"
-# HTML 리포트 생성 (timestamp 파일명)
-./scripts/run_tests.sh --report
-```
-
-## 현재 포함된 테스트
-- `tests/api/test_coupang_public.py`: CDN 로고 자산 200(Positive), HSTS 헤더 보장(Regression).
-- `tests/api/test_coupang_assets.py`: 로고 자산의 `ETag`, `Content-Length`, 캐시 관련 헤더 Regression.
-- `tests/api/test_coupang_headers.py`: 검색 응답의 세션 쿠키, 보안 헤더, 쿠키 지속성 확인.
-- `tests/api/test_coupang_product.py`: 인증이 필요한 `/np/coupons` 호출 시 401/403과 보안 헤더 노출 여부 확인.
-- `tests/security/test_coupang_waf.py`: SQLi 스타일 검색어가 403으로 차단되는지 확인(Negative).
-- `tests/security/test_logging.py`: HTTP 호출 시 stdout 로그가 남는지 확인(로그 기반 검증).
-- `tests/security/test_abuse.py`: `RequestSpikeDetector` 로 과도한 호출을 탐지.
-- `tests/security/test_detection.py`: 실패율/지연 조합으로 suspicious 동작 플래그.
-- `tests/security/test_mitre_behaviors.py`: MITRE Discovery/ Credential Access 행위가 탐지 로직에 의해 차단되는지 검증.
-- `tests/security/test_header_anomalies.py`: 비정상 헤더(User-Agent 제거 등)에도 보안 헤더가 유지되는지 확인.
-- `tests/security/test_rate_limit_network.py`: 동일 의심 쿼리를 반복 호출했을 때 일관되게 차단되는지 확인.
-- `tests/security/test_cookie_tampering.py`: 잘못된 세션 쿠키를 주입해도 401/403 차단이 유지되는지 확인.
-- `tests/security/test_log_sink.py`: `QA_LAB_LOG_PATH` 기반 JSON 로그 파일 생성 + 다중 요청 기록 테스트.
-- `tests/ui/test_coupang_ui.py`: Playwright로 Access Denied 배너/SQLi 차단을 검증하고 스크린샷 증거를 남김.
-- Playwright 시나리오 요약:
-  - Access Denied 페이지가 “Reference #” 보안 메시지를 노출하는지 확인.
-  - SQLi 스타일 검색 쿼리로 403 + `x-reference-error` 가 발생하는지 브라우저 상에서 검증.
-  - 헤드리스 Chromium으로 API Negative 시나리오를 UI 계층에서도 재현.
-
-> 네트워크 실 테스트는 한국 외 지역에서 403이 날 수 있으므로, 상태코드 집합을 허용 범위로 두고 보안 헤더/응답 특징 위주로 검증한다.
-
-## 환경 변수 / 커스터마이즈
-
-| 변수 | 기본값 | 설명 |
-| --- | --- | --- |
-| `QA_LAB_BASE_URL` | `https://www.coupang.com` | 메인 도메인 (API 테스트) |
-| `QA_LAB_CDN_URL` | `https://static.coupangcdn.com` | 정적 자산 검증용 |
-| `QA_LAB_TIMEOUT` | `5` | `requests` 타임아웃(초) |
-| `QA_LAB_USER_AGENT` | `QA-Automation-Lab/0.1 (+pytest requests)` | 공통 User-Agent |
-| `QA_LAB_LOG_PATH` | (빈 값) | 설정 시 HTTP 로그를 JSON 라인 파일로 저장 |
-
-환경변수를 조정하면 프록시/지역 제한 등의 환경에서도 동일한 테스트 스위트를 쉽게 재현할 수 있다.
-
-## 다음 확장 아이디어
-- 실제 계정 인증이 가능한 환경이라면 Positive 테스트를 홈/검색 성공 케이스로 확장.
-- CDN 외 다른 정적 리소스(이미지 sprite, CSS)도 모니터링해 Regression 커버리지 증대.
-- `log_http_exchange` 를 파일 로깅으로 전환하고, pytest에서 로그 파일을 fixtures로 검증.
-- `docs/findings.md` 에 실험 결과/장애 케이스를 주기적으로 추가해 히스토리 확보.
+## Roadmap
+- 실제 검색 성공 플로우(로그인/세션 환경) 확보 시 Positive 테스트를 확장합니다.
+- CDN 외 CSS/JS sprite 회귀 모니터링을 추가합니다.
+- HTML 리포트 샘플을 README에 링크하거나 스크린샷을 첨부합니다.
+- `QA_LAB_LOG_PATH` 로그 기반으로 탐지 결과/alert 를 자동 분석하는 리포트를 추가합니다.

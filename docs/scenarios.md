@@ -3,7 +3,7 @@
 | MITRE 전술 | 기술 ID | Negative Test Case | 기대 동작 |
 | --- | --- | --- | --- |
 | Discovery | T1046 | `/np/search` 가 짧은 시간 안에 연속 호출 | `detect_discovery_enumeration` 이 alert=True → 테스트 FAIL |
-| Credential Access (Exploit Public-Facing App) | T1190 | `"' OR 1=1 --"` 등 SQLi 패턴 쿼리 | `detect_exploit_attempts` 가 alert=True + WAF 403 |
+| Initial Access (Exploit Public-Facing App) | T1190 | `"' OR 1=1 --"` 등 SQLi 패턴 쿼리 | `detect_exploit_attempts` 가 alert=True + WAF 403 |
 | Reconnaissance | T1595 | `/np/coupons`, `/np/member` 등 제한 페이지 접근 | `detect_restricted_resource_access` alert=True (403 기록) |
 | Impact | T1499 | 연속으로 1500ms 이상 지연 | `detect_latency_spike` alert=True |
 
