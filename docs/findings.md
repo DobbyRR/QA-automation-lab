@@ -7,4 +7,5 @@
 | 2025-12-29 | Security QA 업그레이드 | MITRE Discovery/ Credential Access 행위 테스트 + 탐지 로직 |
 | 2025-12-29 | Security QA 확장 | Rate limit 반복 호출, 헤더 이상 탐지, 로그 파일 검증, Recon/Impact 룰 |
 | 2025-12-29 | Playwright UI | Access Denied/SQLi 차단을 브라우저에서 검증 |
+| 2025-12-29 | 추가 시나리오 | 쿠폰/세션 쿠키 보안, 스크린샷, GitHub Actions 리포트 |
 | TBD | 행위 기반 테스트 | Rate limit, 로그 분석 로직 추가 예정 |

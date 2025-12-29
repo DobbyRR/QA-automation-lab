@@ -27,3 +27,4 @@
 2. `pip install -r requirements.txt`
 3. `python -m playwright install chromium`
 3. `./scripts/run_tests.sh` 또는 `pytest`
+4. GitHub Actions(`.github/workflows/qa.yml`)에서 동일 스크립트를 실행해 HTML 리포트를 artifact 로 업로드한다.

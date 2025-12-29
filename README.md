@@ -11,6 +11,7 @@
 - 실 서비스 호출은 `pytest -m network` 로 구분하고, 그 외는 `monkeypatch` 로 빠른 단위 테스트 유지
 - `QA_LAB_LOG_PATH` 환경변수를 지정하면 HTTP 로그가 JSON 파일로 쌓여 Threat Hunting 분석에 바로 활용 가능
 - Threat Hunting 자료를 그대로 활용해 MITRE ATT&CK 전술/기술을 테스트 케이스에 명시
+- GitHub Actions(workflow: `.github/workflows/qa.yml`)에서 `./scripts/run_tests.sh --report` 를 주기적으로 실행하고, HTML 리포트를 artifact 로 업로드해 공유할 수 있다.
 - CI(예: GitHub Actions)에서 `./scripts/run_tests.sh --report` 를 주기적으로 실행하면 네트워크/API/보안/UI 전체 커버리지 리포트를 자동 수집할 수 있다.
 
 ## 현재 검증 범위
@@ -75,6 +76,7 @@ pytest -m "network and ui"
 - `tests/api/test_coupang_public.py`: CDN 로고 자산 200(Positive), HSTS 헤더 보장(Regression).
 - `tests/api/test_coupang_assets.py`: 로고 자산의 `ETag`, `Content-Length`, 캐시 관련 헤더 Regression.
 - `tests/api/test_coupang_headers.py`: 검색 응답의 세션 쿠키, 보안 헤더, 쿠키 지속성 확인.
+- `tests/api/test_coupang_product.py`: 인증이 필요한 `/np/coupons` 호출 시 401/403과 보안 헤더 노출 여부 확인.
 - `tests/security/test_coupang_waf.py`: SQLi 스타일 검색어가 403으로 차단되는지 확인(Negative).
 - `tests/security/test_logging.py`: HTTP 호출 시 stdout 로그가 남는지 확인(로그 기반 검증).
 - `tests/security/test_abuse.py`: `RequestSpikeDetector` 로 과도한 호출을 탐지.
@@ -82,8 +84,9 @@ pytest -m "network and ui"
 - `tests/security/test_mitre_behaviors.py`: MITRE Discovery/ Credential Access 행위가 탐지 로직에 의해 차단되는지 검증.
 - `tests/security/test_header_anomalies.py`: 비정상 헤더(User-Agent 제거 등)에도 보안 헤더가 유지되는지 확인.
 - `tests/security/test_rate_limit_network.py`: 동일 의심 쿼리를 반복 호출했을 때 일관되게 차단되는지 확인.
-- `tests/security/test_log_sink.py`: `QA_LAB_LOG_PATH` 기반 JSON 로그 파일 생성 테스트.
-- `tests/ui/test_coupang_ui.py`: Playwright로 실제 페이지를 열어 Access Denied 배너와 SQLi 검색 차단을 브라우저 관점에서 검증.
+- `tests/security/test_cookie_tampering.py`: 잘못된 세션 쿠키를 주입해도 401/403 차단이 유지되는지 확인.
+- `tests/security/test_log_sink.py`: `QA_LAB_LOG_PATH` 기반 JSON 로그 파일 생성 + 다중 요청 기록 테스트.
+- `tests/ui/test_coupang_ui.py`: Playwright로 Access Denied 배너/SQLi 차단을 검증하고 스크린샷 증거를 남김.
 - Playwright 시나리오 요약:
   - Access Denied 페이지가 “Reference #” 보안 메시지를 노출하는지 확인.
   - SQLi 스타일 검색 쿼리로 403 + `x-reference-error` 가 발생하는지 브라우저 상에서 검증.
