@@ -1,7 +1,7 @@
 # QA Automation Lab · Public Web & CDN Monitoring (Coupang example)
 
-![CI](https://github.com/taekgonkim/QA-automation-lab/actions/workflows/qa.yml/badge.svg)
-![Tests](https://img.shields.io/badge/pytest-32%20tests-green)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue)
+![Tests](https://img.shields.io/badge/pytest-32%20tests-brightgreen)
 
 Python + pytest + Playwright로 공개 웹/정적 리소스를 빠르게 검증하고, Positive/Negative/Regression/보안 행위 테스트를 한 번에 자동화하는 포트폴리오 프로젝트입니다. 예시 타깃으로 Coupang의 공개 리소스를 사용하지만, 구조는 어떤 퍼블릭 도메인에도 재활용 가능합니다.
 
