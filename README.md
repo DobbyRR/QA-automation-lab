@@ -26,6 +26,7 @@ pip install -r requirements.txt && python -m playwright install chromium
 
 ## Test Coverage
 - **Positive**: CDN 로고 자산 200 응답, `Content-Length`, HSTS, 정적 헤더 회귀(`tests/api/test_coupang_public.py`, `tests/api/test_coupang_assets.py`)
+- **Additional CDN sentinels**: CSS/JS/sprite 감시용 접근 가능한 자산을 `static`/`img1a` CDN 에서 주기적으로 검증(`tests/api/test_coupang_additional_assets.py`)
 - **Negative**: SQLi 스타일 의심 검색 → 403 + `X-Reference-Error`, 위조 쿠키 주입, `/np/coupons` 접근 제한 (`tests/security/test_coupang_waf.py`, `tests/security/test_cookie_tampering.py`, `tests/api/test_coupang_product.py`)
 - **Regression**: 홈/검색 응답의 HSTS·세션 헤더, 상태코드 일관성 (`tests/api/test_coupang_headers.py`)
 - **Security Behaviors (MITRE)**:
@@ -34,7 +35,7 @@ pip install -r requirements.txt && python -m playwright install chromium
   - T1595 Recon – 제한 엔드포인트 접근 시 차단 여부
   - T1499 Impact – Latency spike 알람
   (`tests/security/test_mitre_behaviors.py`, `tests/security/test_abuse.py`, `qa_lab/utils/detections.py`)
-- **Logs & Reporting**: `QA_LAB_LOG_PATH` 지정 시 HTTP 로그를 JSON 라인으로 저장하고 pytest로 검증 (`tests/security/test_log_sink.py`)
+- **Logs & Reporting**: `QA_LAB_LOG_PATH` 지정 시 HTTP 로그를 JSON 라인으로 저장하고 pytest로 검증 (`tests/security/test_log_sink.py`), `qa_lab/utils/log_summary.py` 로 요약/경보 확인
 - **UI (Playwright)**: Access Denied 배너, SQLi 차단 페이지, 스크린샷 저장 (`tests/ui/test_coupang_ui.py`)
 
 ## Markers & Execution
