@@ -27,6 +27,18 @@ def cdn_client(settings: Settings) -> ApiClient:
 
 
 @pytest.fixture
+def cdn_mirror_client(settings: Settings) -> ApiClient:
+    """ApiClient pointing at the img1a CDN mirror for additional assets."""
+    mirror_settings = Settings(
+        base_url="https://img1a.coupangcdn.com",
+        cdn_url="https://img1a.coupangcdn.com",
+        timeout=settings.timeout,
+        user_agent=settings.user_agent,
+    )
+    return ApiClient(settings=mirror_settings)
+
+
+@pytest.fixture
 def fake_response():
     """Factory to build ``requests.Response`` objects without HTTP calls."""
 
