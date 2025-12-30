@@ -29,6 +29,12 @@ def test_sqli_query_blocked_in_browser(page):
     if response.status == 403:
         assert "x-reference-error" in headers
     assert "Access Denied" in page.content()
+    screenshots_dir = Path("reports/screenshots")
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    screenshot_path = screenshots_dir / "sqli_blocked.png"
+    page.screenshot(path=str(screenshot_path))
+    assert screenshot_path.exists()
+    assert screenshot_path.stat().st_size > 0
 
 
 @pytest.mark.network
